@@ -6,27 +6,41 @@ import { AnimatedSection } from "@/components/ui/animated-section"
 import { ImageWithPlaceholder } from "@/components/ui/image-with-placeholder"
 import { galleryImages } from "@/lib/data"
 
+// ---- Types ----
+type SortKey = "newest" | "oldest" | "az"
+type OpenMenu = "sort" | "filter" | null
+
+// Ensure your galleryImages match (add 'date' if you have it)
+type GalleryImage = {
+  id?: number | string
+  src: string
+  alt?: string
+  caption?: string
+  category?: string
+  date?: string // ISO date like "2025-10-31" (optional)
+}
+
 export default function GalleryPage() {
-  const [selectedIndex, setSelectedIndex] = useState(null)
-  const [selectedCategory, setSelectedCategory] = useState(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [sortBy, setSortBy] = useState("newest") // "newest" | "oldest" | "az"
-  const [visibleCount, setVisibleCount] = useState(12)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState<string>("")
+  const [sortBy, setSortBy] = useState<SortKey>("newest")
+  const [visibleCount, setVisibleCount] = useState<number>(12)
 
   // dropdown state
-  const [openMenu, setOpenMenu] = useState(null) // 'sort' | 'filter' | null
-  const sortRef = useRef(null)
-  const filterRef = useRef(null)
+  const [openMenu, setOpenMenu] = useState<OpenMenu>(null)
+  const sortRef = useRef<HTMLDivElement | null>(null)
+  const filterRef = useRef<HTMLDivElement | null>(null)
 
-  const searchInputRef = useRef(null)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
 
   // Close dropdowns on outside click
   useEffect(() => {
-    const onClick = (e) => {
+    const onClick = (e: MouseEvent) => {
       if (
         openMenu &&
-        !sortRef.current?.contains(e.target) &&
-        !filterRef.current?.contains(e.target)
+        !sortRef.current?.contains(e.target as Node) &&
+        !filterRef.current?.contains(e.target as Node)
       ) {
         setOpenMenu(null)
       }
@@ -35,10 +49,10 @@ export default function GalleryPage() {
     return () => document.removeEventListener("mousedown", onClick)
   }, [openMenu])
 
-  // Keyboard shortcuts: "/" focuses search, ESC closes lightbox
+  // Keyboard shortcuts: "/" focuses search, ESC closes lightbox/menu
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "/" && document.activeElement?.tagName !== "INPUT") {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "/" && (document.activeElement?.tagName ?? "").toLowerCase() !== "input") {
         e.preventDefault()
         searchInputRef.current?.focus()
       }
@@ -52,26 +66,25 @@ export default function GalleryPage() {
   }, [selectedIndex, openMenu])
 
   // Build categories with counts
-  const categories = useMemo(() => {
-    const map = new Map()
-    galleryImages.forEach((img) => {
+  const categories = useMemo<[string, number][]>(() => {
+    const map = new Map<string, number>()
+    ;(galleryImages as GalleryImage[]).forEach((img) => {
       const cat = img.category || "Uncategorized"
       map.set(cat, (map.get(cat) || 0) + 1)
     })
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]))
   }, [])
 
-  // Filter + search
-  const filtered = useMemo(() => {
+  // Filter + search + sort
+  const filtered = useMemo<GalleryImage[]>(() => {
     const q = searchQuery.trim().toLowerCase()
-    let list = galleryImages.filter((img) => {
+    let list = (galleryImages as GalleryImage[]).filter((img) => {
       const catOk = !selectedCategory || (img.category || "Uncategorized") === selectedCategory
       const text = `${img.caption || ""} ${img.alt || ""} ${img.category || ""}`.toLowerCase()
       const qOk = !q || text.includes(q)
       return catOk && qOk
     })
 
-    // Sort safely: prefer date if present; fallback to caption
     list = list.slice().sort((a, b) => {
       if (sortBy === "az") {
         return (a.caption || "").localeCompare(b.caption || "")
@@ -117,14 +130,20 @@ export default function GalleryPage() {
 
   const handlePrevious = () => {
     if (selectedIndex === null) return
-    setSelectedIndex((selectedIndex - 1 + filtered.length) % filtered.length)
+    setSelectedIndex((prev) => {
+      if (prev === null) return prev
+      return (prev - 1 + filtered.length) % filtered.length
+    })
   }
   const handleNext = () => {
     if (selectedIndex === null) return
-    setSelectedIndex((selectedIndex + 1) % filtered.length)
+    setSelectedIndex((prev) => {
+      if (prev === null) return prev
+      return (prev + 1) % filtered.length
+    })
   }
 
-  const handleLightboxKeyDown = (e) => {
+  const handleLightboxKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (selectedIndex === null) return
     if (e.key === "ArrowLeft") handlePrevious()
     if (e.key === "ArrowRight") handleNext()
@@ -137,22 +156,22 @@ export default function GalleryPage() {
     <div className="w-full">
       {/* Hero */}
       <section className="relative pt-10 pb-8 px-4 sm:px-6 lg:px-8 bg-muted/30">
-      <div className="absolute inset-0 -z-10 pointer-events-none">
-        {/* Light theme */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-center bg-cover dark:hidden"
-          style={{ backgroundImage: "url('/cover.jpg')" }}
-        />
-        {/* Dark theme */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-center bg-cover hidden dark:block"
-          style={{ backgroundImage: "url('/cover2.jpg')" }}
-        />
-        {/* Readability overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-background/85 dark:from-black/40 dark:via-black/30 dark:to-background/80" />
-      </div>
+        <div className="absolute inset-0 -z-10 pointer-events-none">
+          {/* Light theme */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-center bg-cover dark:hidden"
+            style={{ backgroundImage: "url('/cover.jpg')" }}
+          />
+          {/* Dark theme */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-center bg-cover hidden dark:block"
+            style={{ backgroundImage: "url('/cover2.jpg')" }}
+          />
+          {/* Readability overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-background/85 dark:from-black/40 dark:via-black/30 dark:to-background/80" />
+        </div>
         <div className="max-w-7xl mx-auto relative">
           <AnimatedSection>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">Gallery</h1>
@@ -196,11 +215,11 @@ export default function GalleryPage() {
                     tabIndex={-1}
                     className="absolute z-40 mt-2 w-48 rounded-xl border bg-background shadow-lg p-1"
                   >
-                    {[
+                    {([
                       { key: "newest", label: "Newest" },
                       { key: "oldest", label: "Oldest" },
                       { key: "az", label: "A–Z" },
-                    ].map((opt) => (
+                    ] as { key: SortKey; label: string }[]).map((opt) => (
                       <button
                         key={opt.key}
                         role="menuitemradio"
@@ -239,11 +258,7 @@ export default function GalleryPage() {
                 </button>
 
                 {openMenu === "filter" && (
-                  <div
-                    role="menu"
-                    tabIndex={-1}
-                    className="absolute z-40 mt-2 w-64 rounded-xl border bg-background shadow-lg p-2"
-                  >
+                  <div role="menu" tabIndex={-1} className="absolute z-40 mt-2 w-64 rounded-xl border bg-background shadow-lg p-2">
                     <div className="max-h-64 overflow-auto pr-1">
                       <button
                         role="menuitemradio"
@@ -258,7 +273,7 @@ export default function GalleryPage() {
                         }`}
                       >
                         <span>All</span>
-                        <span className="text-xs text-muted-foreground">{galleryImages.length}</span>
+                        <span className="text-xs text-muted-foreground">{(galleryImages as GalleryImage[]).length}</span>
                       </button>
 
                       {categories.map(([cat, count]) => (
@@ -291,10 +306,7 @@ export default function GalleryPage() {
                       >
                         Clear
                       </button>
-                      <button
-                        onClick={() => setOpenMenu(null)}
-                        className="text-xs px-2 py-1 rounded-md bg-primary text-primary-foreground hover:opacity-90"
-                      >
+                      <button onClick={() => setOpenMenu(null)} className="text-xs px-2 py-1 rounded-md bg-primary text-primary-foreground hover:opacity-90">
                         Done
                       </button>
                     </div>
@@ -304,7 +316,8 @@ export default function GalleryPage() {
 
               {/* Count */}
               <div className="text-sm text-muted-foreground md:ml-auto" aria-live="polite">
-                {filtered.length} item{filtered.length !== 1 ? "s" : ""}{selectedCategory ? ` • ${selectedCategory}` : ""}
+                {filtered.length} item{filtered.length !== 1 ? "s" : ""}
+                {selectedCategory ? ` • ${selectedCategory}` : ""}
               </div>
             </div>
           </AnimatedSection>
@@ -315,16 +328,14 @@ export default function GalleryPage() {
       <section className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {visible.length === 0 ? (
-            <div className="text-center py-20 text-muted-foreground">
-              No images match your search.
-            </div>
+            <div className="text-center py-20 text-muted-foreground">No images match your search.</div>
           ) : (
             <>
               <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
                 {visible.map((image, i) => {
-                  const filteredIndex = i
+                  const filteredIndex = i // indices align within 'visible' slice
                   return (
-                    <AnimatedSection key={image.id ?? `${image.src}-${i}`} delay={i * 0.04}>
+                    <AnimatedSection key={(image.id ?? `${image.src}-${i}`) as React.Key} delay={i * 0.04}>
                       <button
                         onClick={() => setSelectedIndex(filteredIndex)}
                         className="group cursor-pointer w-full break-inside-avoid"
@@ -337,7 +348,6 @@ export default function GalleryPage() {
                             width={800}
                             height={600}
                             className="w-full h-auto"
-                            loading="lazy"
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end p-4">
                             {(image.caption || image.category) && (
