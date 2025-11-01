@@ -2,7 +2,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Github, Linkedin, Mail, Sparkles } from "lucide-react"
+import { ArrowRight, Github, Linkedin, Mail, Sparkles, Brain, Code, Database, Wrench } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { motion, useAnimation, useReducedMotion } from "framer-motion"
 import type { Variants, Transition } from "framer-motion"
@@ -13,6 +13,7 @@ import { projects, blogPosts, skills } from "@/lib/data"
 import { AnimatedBackground } from "@/components/hero/animated-background"
 import { FloatingElements } from "@/components/hero/floating-elements"
 import { CodeSnippets } from "@/components/hero/code-snippets"
+import { SkillCard } from "@/components/skills/skill-card"
 import { TypingAnimation } from "@/components/hero/typing-animation"
 
 // ---- Reusable Animation Components (typed) ----
@@ -197,7 +198,7 @@ export default function Home() {
       </section>
 
       {/* Featured Projects */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-muted/30">
+      <section className=" px-4 sm:px-6 lg:px-8 bg-muted/30">
         <div className="max-w-7xl mx-auto">
           <AnimatedSection>
             <br />
@@ -257,36 +258,82 @@ export default function Home() {
       </section>
 
       {/* Skills Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+        </div>
+
         <div className="max-w-7xl mx-auto">
           <AnimatedSection>
-            <br />
-            <br />
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold mb-4">Skills &amp; Stack</h2>
-              <p className="text-lg text-muted-foreground">Technologies and tools I work with</p>
+            <div className="text-center mb-16 space-y-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium mb-4"
+              >
+                <Sparkles className="w-4 h-4 text-primary" />
+                <span>Technical Expertise</span>
+              </motion.div>
+              <h2 className="text-4xl sm:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+                Skills & Stack
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                A comprehensive toolkit for building intelligent systems and scalable applications
+              </p>
             </div>
           </AnimatedSection>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {Object.entries(skills).map(([category, items], index) => (
-              <AnimatedSection key={category} delay={index * 0.05}>
-                <div className="space-y-4 p-6 bg-muted/40 rounded-lg h-full">
-                  <h3 className="font-bold text-lg text-foreground">{category}</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {(items as string[]).map((skill) => (
-                      <span key={skill} className="px-3 py-1 bg-muted rounded-full text-sm hover:bg-primary/10 transition-colors">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </AnimatedSection>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <SkillCard
+              category="Machine Learning"
+              skills={skills["Machine Learning"]}
+              icon={Brain}
+              delay={0}
+              gradient="bg-gradient-to-br from-purple-500 to-pink-500"
+            />
+            <SkillCard
+              category="Web Development"
+              skills={skills["Web Development"]}
+              icon={Code}
+              delay={0.1}
+              gradient="bg-gradient-to-br from-blue-500 to-cyan-500"
+            />
+            <SkillCard
+              category="Data Science"
+              skills={skills["Data Science"]}
+              icon={Database}
+              delay={0.2}
+              gradient="bg-gradient-to-br from-green-500 to-emerald-500"
+            />
+            <SkillCard
+              category="Tools & Platforms"
+              skills={skills["Tools & Platforms"]}
+              icon={Wrench}
+              delay={0.3}
+              gradient="bg-gradient-to-br from-orange-500 to-red-500"
+            />
           </div>
+
+          <AnimatedSection delay={0.4}>
+            <div className="text-center mt-12">
+              <motion.p
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className="text-muted-foreground"
+              >
+                Always learning and exploring new technologies.{" "}
+                <Link href="/about" className="text-primary hover:underline font-medium">
+                  Learn more about my journey
+                </Link>
+              </motion.p>
+            </div>
+          </AnimatedSection>
         </div>
-        <br />
-        <br />
       </section>
 
       {/* About Teaser */}

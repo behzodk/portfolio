@@ -138,24 +138,14 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
               {
-                title: "Best AI Project",
-                organization: "Tech Innovation Summit 2024",
-                description: "Recognized for innovative approach to neural network optimization",
+                title: "Winner of Regional Programming Olympiad",
+                organization: "Programming Olympiad of republic of Uzbekistan",
+                description: "First place among high school students in the regional programming competition",
               },
               {
-                title: "Research Excellence",
-                organization: "University Research Awards",
-                description: "Outstanding contribution to machine learning research",
-              },
-              {
-                title: "Developer of the Year",
-                organization: "Tech Community Awards",
-                description: "Recognition for contributions to open-source projects",
-              },
-              {
-                title: "Innovation Grant",
-                organization: "Tech Foundation",
-                description: "Awarded for groundbreaking work in AI applications",
+                title: "Student of the Year 2024",
+                organization: "Agency of Specialized Schools",
+                description: "Recognized for outstanding academic performance and community involvement by minister of public education",
               },
             ].map((award, index) => (
               <AnimatedSection key={index} delay={index * 0.1}>
