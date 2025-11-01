@@ -1,32 +1,33 @@
-// src/components/hero/typing-animation.jsx
+// src/components/hero/typing-animation.tsx
 "use client"
 
 import { motion, useMotionValue, useTransform, animate } from "framer-motion"
 import { useEffect, useState } from "react"
 
-/**
- * @typedef {Object} TypingProps
- * @property {string} text
- * @property {string} [className]
- * @property {number} [delay]
- * @property {number} [speed]
- * @property {boolean} [gradient]
- */
+type TypingAnimationProps = {
+  text: string
+  className?: string
+  delay?: number
+  speed?: number
+  gradient?: boolean
+}
 
-/** @param {TypingProps} props */
-export function TypingAnimation(props) {
-  // Destructure *inside* so TS doesn't complain about implicit any on bindings
-  const { text, className = "", delay = 0, speed = 0.05, gradient = false } = props
-
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [showCursor, setShowCursor] = useState(true)
+export function TypingAnimation({
+  text,
+  className = "",
+  delay = 0,
+  speed = 0.05,
+  gradient = false,
+}: TypingAnimationProps) {
+  const [currentIndex, setCurrentIndex] = useState<number>(0)
+  const [showCursor, setShowCursor] = useState<boolean>(true)
 
   const count = useMotionValue(0)
-  const rounded = useTransform(count, (latest) => Math.round(latest))
-  const displayedText = useTransform(rounded, (latest) => text.slice(0, latest))
+  const rounded = useTransform(count, (latest: number) => Math.round(latest))
+  const displayedText = useTransform(rounded, (latest: number) => text.slice(0, latest))
 
   useEffect(() => {
-    const unsubscribe = rounded.on("change", (latest) => setCurrentIndex(latest))
+    const unsubscribe = rounded.on("change", (latest) => setCurrentIndex(latest as number))
 
     const controls = animate(count, text.length, {
       type: "tween",
@@ -42,8 +43,8 @@ export function TypingAnimation(props) {
       controls.stop()
       unsubscribe()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count, text.length, speed, delay, rounded])
+    // intentionally depend on the stable values used above
+  }, [count, rounded, text.length, speed, delay])
 
   useEffect(() => {
     if (currentIndex < text.length || showCursor) {

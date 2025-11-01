@@ -26,8 +26,9 @@ export function FloatingElements() {
             key={index}
             className="absolute opacity-10"
             style={{
-              left: `${x}%`,
-              top: `${y}%`,
+              // --- CHANGED --- Round the values to 2 decimal places
+              left: `${x.toFixed(2)}%`,
+              top: `${y.toFixed(2)}%`,
             }}
             initial={{ opacity: 0, scale: 0 }}
             animate={{

@@ -1,12 +1,18 @@
 "use client"
 
 import { motion } from "framer-motion"
+// --- CHANGED --- Import useState
 import { useEffect, useState } from "react"
 
 export function AnimatedBackground() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  // --- CHANGED --- Add isMounted state
+  const [isMounted, setIsMounted] = useState(false)
 
+  // --- CHANGED --- Set isMounted to true after component mounts
   useEffect(() => {
+    setIsMounted(true)
+
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({
         x: (e.clientX / window.innerWidth) * 100,
@@ -51,25 +57,28 @@ export function AnimatedBackground() {
       />
 
       {/* Floating particles */}
-      {[...Array(20)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute w-1 h-1 bg-primary/20 rounded-full"
-          initial={{
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
-          }}
-          animate={{
-            y: [null, Math.random() * window.innerHeight],
-            x: [null, Math.random() * window.innerWidth],
-          }}
-          transition={{
-            duration: Math.random() * 10 + 20,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "linear",
-          }}
-        />
-      ))}
+      {/* --- CHANGED --- Only render particles on the client */}
+      {isMounted &&
+        [...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-primary/20 rounded-full"
+            initial={{
+              // This code is now safe because it only runs when isMounted is true
+              x: Math.random() * window.innerWidth,
+              y: Math.random() * window.innerHeight,
+            }}
+            animate={{
+              y: [null, Math.random() * window.innerHeight],
+              x: [null, Math.random() * window.innerWidth],
+            }}
+            transition={{
+              duration: Math.random() * 10 + 20,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: "linear",
+            }}
+          />
+        ))}
 
       {/* Grid pattern */}
       <div
