@@ -138,6 +138,7 @@ export default function ShortenUrlPage() {
   const [toastVisible, setToastVisible] = useState(false)
   const [toastType, setToastType] = useState<"success" | "info">("success")
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null)
+  const [pendingDeleteSlug, setPendingDeleteSlug] = useState<string | null>(null)
 
   const expiresAt = useMemo(
     () => calculateExpiryDate(formState.expiration, formState.customExpiryDays),
@@ -347,12 +348,6 @@ export default function ShortenUrlPage() {
 
   const handleDeleteLink = async (slug: string) => {
     if (!userId) return
-    const confirmed =
-      typeof window !== "undefined"
-        ? window.confirm(`Delete ${shortDomain}/${slug}? This cannot be undone.`)
-        : false
-    if (!confirmed) return
-
     setDeletingSlug(slug)
     const { error } = await supabase.from("short_links").delete().eq("user_id", userId).eq("slug", slug)
     if (error) {
@@ -365,6 +360,7 @@ export default function ShortenUrlPage() {
       setTimeout(() => setToastVisible(false), 3000)
     }
     setDeletingSlug(null)
+    setPendingDeleteSlug(null)
   }
 
   const handleAuthToggle = async () => {
@@ -566,7 +562,7 @@ export default function ShortenUrlPage() {
                             Copy
                           </button>
                           <button
-                            onClick={() => handleDeleteLink(link.slug)}
+                            onClick={() => setPendingDeleteSlug(link.slug)}
                             disabled={deletingSlug === link.slug}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition disabled:opacity-50"
                           >
@@ -731,6 +727,41 @@ export default function ShortenUrlPage() {
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {pendingDeleteSlug && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-lg border border-border bg-card shadow-lg p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Delete short link</h2>
+              <button
+                onClick={() => setPendingDeleteSlug(null)}
+                className="p-1.5 hover:bg-muted rounded-lg transition"
+                aria-label="Close delete dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {shortDomain}/{pendingDeleteSlug} will be removed permanently. This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setPendingDeleteSlug(null)}
+                className="px-3 py-2 text-sm rounded-lg border border-border hover:bg-muted transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteLink(pendingDeleteSlug)}
+                disabled={deletingSlug === pendingDeleteSlug}
+                className="px-3 py-2 text-sm rounded-lg bg-red-500 text-red-50 hover:bg-red-600 transition disabled:opacity-60"
+              >
+                {deletingSlug === pendingDeleteSlug ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}

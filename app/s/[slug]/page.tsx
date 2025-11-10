@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
+import { headers } from "next/headers"
 import { AlertTriangle, Lock } from "lucide-react"
-import { createSupabaseClient } from "@/lib/supabase-client"
+import { createSupabaseServerClient } from "@/lib/supabase-server"
 
 interface ShortLinkPageProps {
   params: Promise<{ slug: string }>
@@ -14,11 +15,50 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
   const params = await props.params
   const searchParams = (await props.searchParams) ?? {}
 
-  const supabase = createSupabaseClient()
+  const supabase = createSupabaseServerClient()
+  const headersList = await headers()
+
+  const detectDevice = (userAgent: string | null) => {
+    if (!userAgent) return "unknown"
+    const ua = userAgent.toLowerCase()
+    if (ua.includes("tablet") || ua.includes("ipad")) return "tablet"
+    if (ua.includes("mobi") || ua.includes("android")) return "mobile"
+    return "desktop"
+  }
+
+  const collectVisitorInfo = () => {
+    const ip =
+      headersList.get("x-forwarded-for")?.split(",")[0].trim() ??
+      headersList.get("x-real-ip") ??
+      headersList.get("x-vercel-ip") ??
+      headersList.get("cf-connecting-ip") ??
+      null
+
+    const city = headersList.get("x-vercel-ip-city") ?? headersList.get("cf-ipcity") ?? ""
+    const country = headersList.get("x-vercel-ip-country") ?? headersList.get("cf-ipcountry") ?? ""
+    const location = [city, country].filter(Boolean).join(", ") || null
+    const deviceType = detectDevice(headersList.get("user-agent"))
+
+    return { ip, location, deviceType }
+  }
+
+  const logVisit = async (shortLinkId: string) => {
+    try {
+      const info = collectVisitorInfo()
+      await supabase.from("visits").insert({
+        short_link_id: shortLinkId,
+        ip_address: info.ip,
+        location: info.location,
+        device_type: info.deviceType,
+      })
+    } catch (error) {
+      // Swallow logging errors
+    }
+  }
 
   const { data, error } = await supabase
     .from("short_links")
-    .select("destination_url, expires_at, require_passcode, passcode, visibility")
+    .select("id, destination_url, expires_at, require_passcode, passcode, visibility")
     .eq("slug", params.slug)
     .maybeSingle()
 
@@ -37,6 +77,7 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
       typeof providedPasscode === "string" ? providedPasscode : Array.isArray(providedPasscode) ? providedPasscode[0] : ""
 
     if (passcode && passcode === data.passcode) {
+      await logVisit(data.id)
       redirect(data.destination_url)
     }
 
@@ -76,5 +117,6 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
     )
   }
 
+  await logVisit(data.id)
   redirect(data.destination_url)
 }
