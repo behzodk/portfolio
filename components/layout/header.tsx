@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X, Moon, Sun } from "lucide-react"
+import { Menu, X, Moon, Sun, LogOut } from "lucide-react"
 import { useTheme } from "@/components/providers/theme-provider"
 import { cn } from "@/lib/utils"
+import { supabase } from "@/lib/supabase-client"
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -19,8 +20,10 @@ const navItems = [
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
   const pathname = usePathname()
-  const { theme, toggleTheme, } = useTheme()
+  const { theme, toggleTheme } = useTheme()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,6 +33,29 @@ export function Header() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const fullName = data.session?.user.user_metadata?.full_name as string | undefined
+      setUserName(fullName ?? null)
+      setAuthLoading(false)
+    })
+
+    const subscription = supabase.auth.onAuthStateChange((_event, session) => {
+      const fullName = session?.user.user_metadata?.full_name as string | undefined
+      setUserName(fullName ?? null)
+    })
+
+    return () => {
+      subscription.data.subscription.unsubscribe()
+    }
+  }, [])
+
+  const handleLogout = async () => {
+    setAuthLoading(true)
+    await supabase.auth.signOut()
+    setAuthLoading(false)
+  }
 
   return (
     <header
@@ -70,6 +96,24 @@ export function Header() {
 
         {/* Theme Controls */}
         <div className="flex items-center gap-2">
+          {userName ? (
+            <button
+              onClick={handleLogout}
+              disabled={authLoading}
+              className="hidden md:inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-foreground/80 hover:border-primary/60 hover:text-foreground transition disabled:opacity-60"
+            >
+              <span>{userName.split(" ")[0]}</span>
+              <span className="text-muted-foreground text-xs">Logout</span>
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="hidden md:inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-foreground/80 hover:border-primary/60 hover:text-foreground transition"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign in
+            </Link>
+          )}
           <button
             onClick={toggleTheme}
             className="p-2 rounded-md hover:bg-muted transition-colors"
@@ -106,6 +150,27 @@ export function Header() {
                 {item.label}
               </Link>
             ))}
+            <div className="pt-3 border-t border-border/60">
+              {userName ? (
+                <button
+                  onClick={handleLogout}
+                  disabled={authLoading}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground/80 hover:border-primary/60 transition disabled:opacity-60"
+                >
+                  <span>{userName.split(" ")[0]}</span>
+                  <span className="text-muted-foreground text-xs">Logout</span>
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground/80 hover:border-primary/60 transition"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign in
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}

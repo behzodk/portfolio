@@ -111,9 +111,9 @@ export function Footer() {
         <div className="border-t border-border pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <p>&copy; {currentYear} Behzod Musurmonkulov. All rights reserved.</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-foreground transition-colors">
+            <Link href="/privacy" className="hover:text-foreground transition-colors">
               Privacy
-            </a>
+            </Link>
             <a href="#" className="hover:text-foreground transition-colors">
               Terms
             </a>

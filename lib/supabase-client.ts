@@ -12,7 +12,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const createSupabaseClient = () =>
   createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      persistSession: false,
+      persistSession: true,
+      detectSessionInUrl: true,
     },
   })
 

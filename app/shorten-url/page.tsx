@@ -1,43 +1,14 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
 import {
   Link as LinkIcon,
   Sparkles,
-  ShieldCheck,
-  Clock3,
-  BarChart3,
-  CheckCircle2,
   Copy,
   Globe,
 } from "lucide-react"
 import { AnimatedSection } from "@/components/ui/animated-section"
 import { supabase } from "@/lib/supabase-client"
-
-const quickTips = [
-  {
-    title: "Secure by default",
-    description: "Links get HTTPS tracking pixels removed and can be turned off at any time.",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Time-box sharing",
-    description: "Choose how long a short link stays live — from 1 hour to forever.",
-    icon: Clock3,
-  },
-  {
-    title: "Understand engagement",
-    description: "Preview click statistics and top referrers right from your dashboard.",
-    icon: BarChart3,
-  },
-]
-
-const workflow = [
-  { label: "Drop any URL", detail: "Paste a long link from anywhere — docs, dashboards, campaigns." },
-  { label: "Personalize", detail: "Optionally add branded slugs or context tags before sharing." },
-  { label: "Share instantly", detail: "Copy the generated short link or send it to your contacts." },
-]
 
 const stats = [
   { value: "14s", label: "Avg. setup time" },
@@ -244,31 +215,11 @@ export default function ShortenUrlPage() {
     }
   }, [formState.slug, slugTouched])
 
-  const previewSlug = createdLink?.slug ?? (formState.slug || "dev-notes")
   const destinationMeta = useMemo(() => parseDestination(formState.destinationUrl), [formState.destinationUrl])
-  const previewDestination =
-    createdLink?.destination ?? destinationMeta.normalized ?? "https://example.com/much/longer/path"
-  const previewExpiresLabel = createdLink?.expiresAt
-    ? new Date(createdLink.expiresAt).toLocaleString()
-    : formState.expiration === "custom"
-      ? formState.customExpiryDays
-        ? `${formState.customExpiryDays}-day window`
-        : "Custom window"
-      : expirationLabelMap[formState.expiration]
-  const previewBadges = createdLink
-    ? [
-        createdLink.visibility === "public" ? "Public" : "Private",
-        createdLink.requirePasscode ? "Passcode" : "Open access",
-      ]
-    : [
-        formState.visibility === "public" ? "Public" : "Private",
-        formState.requirePasscode ? "Passcode" : "Open access",
-      ]
 
   const destinationError = destinationTouched ? destinationMeta.error : null
   const isPrivate = formState.visibility === "private"
   const passcodeError = isPrivate && !formState.passcode.trim() ? "Passcode required for private links." : null
-  const hasSlugValue = Boolean(formState.slug.trim())
   const slugReady = !slugError && !slugExists && !isSlugChecking
   const destinationReady = !destinationMeta.error
   const passcodeReady = !passcodeError
@@ -393,7 +344,6 @@ export default function ShortenUrlPage() {
       requirePasscode: data.require_passcode,
     })
     setCopied(false)
-    setStatus({ type: "success", message: `Short link ${shortDomain}/${data.slug} created in Supabase.` })
     setFormState({ ...initialFormState })
     setDestinationTouched(false)
     setSlugTouched(false)
@@ -641,9 +591,23 @@ export default function ShortenUrlPage() {
                   {isSubmitting ? "Creating..." : "Create short link"}
                   <Sparkles className="h-5 w-5" />
                 </button>
-                <p className="text-sm text-muted-foreground">
-                  Entries sync to Supabase immediately — analytics wiring comes next.
-                </p>
+                <div className="flex flex-1 items-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                  <Copy className="h-4 w-4 text-primary" />
+                  {createdLink ? (
+                    <>
+                      <span className="truncate">{shortDomain}/{createdLink.slug}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyShortLink(createdLink.slug)}
+                        className="text-primary font-semibold hover:underline"
+                      >
+                        {copied ? "Copied" : "Copy"}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="truncate">Short link appears here after creation</span>
+                  )}
+                </div>
               </div>
             </form>
 
@@ -660,150 +624,40 @@ export default function ShortenUrlPage() {
             )}
 
             {createdLink && (
-              <div className="rounded-2xl border border-border/60 bg-muted/10 p-4 space-y-3">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Short link ready</p>
-                    <p className="text-xl font-semibold">{shortDomain}/{createdLink.slug}</p>
+              <div className="rounded-2xl border border-border/60 bg-card/80 p-5 space-y-4 shadow-sm">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Short link ready
+                </div>
+                <div className="rounded-xl border border-border/60 bg-background/70 px-4 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-3">
+                    <LinkIcon className="h-8 w-8 rounded-xl bg-primary/10 p-1.5 text-primary" />
+                    <p className="text-lg font-semibold break-all">{shortDomain}/{createdLink.slug}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleCopyShortLink(createdLink.slug)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium hover:border-primary/60"
+                    className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium hover:border-primary/60 transition"
                   >
                     <Copy className="h-4 w-4" />
-                    {copied ? "Copied" : "Copy link"}
+                    {copied ? "Copied" : "Copy"}
                   </button>
                 </div>
-                <p className="text-sm text-muted-foreground break-words">
-                  Destination: <span className="font-medium text-foreground">{createdLink.destination}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Expires: {createdLink.expiresAt ? new Date(createdLink.expiresAt).toLocaleString() : "Never"}
-                </p>
-              </div>
-            )}
-          </AnimatedSection>
-
-          {/* Preview */}
-          <AnimatedSection className="space-y-6">
-            <div className="rounded-3xl border border-border/50 bg-muted/20 p-6 shadow-inner">
-              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-[0.4em]">
-                {createdLink ? "Latest short link" : "Preview card"}
-              </p>
-              <div className="mt-6 space-y-4 rounded-2xl border border-border/60 bg-background/80 p-6">
-                <div className="flex items-center gap-3">
-                  <LinkIcon className="h-10 w-10 rounded-2xl bg-primary/10 p-2 text-primary" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {shortDomain}/{previewSlug}
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {createdLink ? "Live short link" : "Configuration preview"}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground break-words">
-                  Will point to <span className="font-medium text-foreground">{previewDestination}</span> with media
-                  unfurling enabled.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {previewBadges.map((badge) => (
-                    <span key={badge} className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
-                      {badge}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between border-t border-border/50 pt-4 text-sm">
-                  <div className="space-y-1">
-                    <p className="text-muted-foreground">Expires</p>
-                    <p className="font-semibold text-foreground">{previewExpiresLabel}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => createdLink && handleCopyShortLink(previewSlug)}
-                    disabled={!createdLink}
-                    className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium hover:border-primary/60 disabled:opacity-50"
-                  >
-                    <Copy className="h-4 w-4" />
-                    {createdLink ? "Copy live link" : "Create first link"}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-border/50 bg-card/80 p-6 space-y-6">
-              <div>
-                <p className="text-sm font-semibold text-muted-foreground">How it will flow</p>
-                <div className="mt-4 space-y-4">
-                  {workflow.map((step, index) => (
-                    <div key={step.label} className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary font-semibold">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="font-semibold">{step.label}</p>
-                        <p className="text-sm text-muted-foreground">{step.detail}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-muted-foreground">Trust indicators</p>
-                <div className="mt-4 grid gap-4">
-                  {quickTips.map(({ title, description, icon: IconComponent }) => (
-                    <div key={title} className="flex gap-4 rounded-2xl border border-border/60 bg-muted/10 p-4">
-                      <IconComponent className="h-10 w-10 flex-shrink-0 rounded-2xl bg-primary/10 p-2 text-primary" />
-                      <div>
-                        <p className="font-semibold">{title}</p>
-                        <p className="text-sm text-muted-foreground">{description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-4 flex items-start gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-green-700 dark:text-green-300">Supabase connected</p>
-                  <p className="text-sm text-green-600 dark:text-green-400">
-                    Form submissions now create rows in <code>short_links</code>. Analytics + dashboards land next.
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p className="break-words">
+                    Destination: <span className="text-foreground">{createdLink.destination}</span>
+                  </p>
+                  <p>
+                    Expires: {createdLink.expiresAt ? new Date(createdLink.expiresAt).toLocaleString() : "Never"}
                   </p>
                 </div>
               </div>
-            </div>
+            )}
           </AnimatedSection>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="pb-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto rounded-3xl border border-border/60 bg-gradient-to-r from-primary/10 via-accent/10 to-transparent p-10 text-center space-y-4">
-          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-[0.3em]">Next Milestone</p>
-          <h3 className="text-3xl font-bold">Layer analytics + insights</h3>
-          <p className="text-muted-foreground">
-            Short links now write to Supabase. Next up: surface click metrics, referrers, and workspace sharing directly
-            in this UI.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-primary-foreground font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/50 transition"
-            >
-              Monitor Supabase table
-            </button>
-            <Link
-              href="/contact"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border px-6 py-3 font-semibold hover:border-primary/50"
-            >
-              Request access
-            </Link>
-          </div>
-        </div>
-      </section>
+
     </div>
   )
 }
