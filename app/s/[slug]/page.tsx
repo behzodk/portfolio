@@ -145,7 +145,7 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
             </button>
           </form>
           <p className="text-xs text-muted-foreground text-center">
-            Hint: you can append <code>?passcode=secret</code> to the URL if you already know it.
+            Hint: you can append <code>?passcode=secret</code> to the URL if you already know it. 
           </p>
         </div>
       </main>
