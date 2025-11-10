@@ -11,12 +11,32 @@ interface ShortLinkPageProps {
 
 export const dynamic = "force-dynamic"
 
+function isPrivateIp(ip: string) {
+  // Strip port if present
+  const clean = ip.replace(/^\s*\[?([^\]]+)\]?(?::\d+)?\s*$/, "$1")
+  // Private IPv4 ranges
+  if (/^(10\.|127\.|169\.254\.|172\.(1[6-9]|2\d|3[0-1])\.|192\.168\.)/.test(clean)) return true
+  // IPv6 loopback or unique local
+  if (/^(::1|fc00:|fd00:|fe80:)/i.test(clean)) return true
+  return false
+}
+
+function firstPublicIpFromXff(xff: string | null) {
+  if (!xff) return null
+  const parts = xff.split(",").map(s => s.trim()).filter(Boolean)
+  for (const ip of parts) {
+    if (!isPrivateIp(ip)) return ip
+  }
+  // If all are private, return the first entry
+  return parts[0] ?? null
+}
+
 export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
   const params = await props.params
   const searchParams = (await props.searchParams) ?? {}
 
   const supabase = createSupabaseServerClient()
-  const headersList = await headers()
+  const hdrs = await headers()
 
   const detectDevice = (userAgent: string | null) => {
     if (!userAgent) return "unknown"
@@ -27,17 +47,28 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
   }
 
   const collectVisitorInfo = () => {
-    const ip =
-      headersList.get("x-forwarded-for")?.split(",")[0].trim() ??
-      headersList.get("x-real-ip") ??
-      headersList.get("x-vercel-ip") ??
-      headersList.get("cf-connecting-ip") ??
-      null
+    // Prefer the first public address from X Forwarded For
+    const xff = hdrs.get("x-forwarded-for")
+    let ip = firstPublicIpFromXff(xff)
 
-    const city = headersList.get("x-vercel-ip-city") ?? headersList.get("cf-ipcity") ?? ""
-    const country = headersList.get("x-vercel-ip-country") ?? headersList.get("cf-ipcountry") ?? ""
+    // Fallbacks that Vercel may add depending on runtime and region
+    if (!ip) ip = hdrs.get("x-real-ip")
+    if (!ip) ip = hdrs.get("x-vercel-ip")
+    if (!ip) ip = hdrs.get("x-edge-ip")
+    if (!ip) ip = null // hide ::1 in local dev
+
+    const city =
+      hdrs.get("x-vercel-ip-city") ||
+      hdrs.get("cf-ipcity") ||
+      ""
+
+    const country =
+      hdrs.get("x-vercel-ip-country") ||
+      hdrs.get("cf-ipcountry") ||
+      ""
+
     const location = [city, country].filter(Boolean).join(", ") || null
-    const deviceType = detectDevice(headersList.get("user-agent"))
+    const deviceType = detectDevice(hdrs.get("user-agent"))
 
     return { ip, location, deviceType }
   }
@@ -51,8 +82,8 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
         location: info.location,
         device_type: info.deviceType,
       })
-    } catch (error) {
-      // Swallow logging errors
+    } catch {
+      // ignore logging errors
     }
   }
 
@@ -74,7 +105,11 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
   if (data.require_passcode) {
     const providedPasscode = searchParams?.passcode
     const passcode =
-      typeof providedPasscode === "string" ? providedPasscode : Array.isArray(providedPasscode) ? providedPasscode[0] : ""
+      typeof providedPasscode === "string"
+        ? providedPasscode
+        : Array.isArray(providedPasscode)
+        ? providedPasscode[0]
+        : ""
 
     if (passcode && passcode === data.passcode) {
       await logVisit(data.id)
@@ -93,7 +128,7 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
           <p className="text-muted-foreground text-center">
             This short link is protected. Ask the owner for the passcode and enter it below to continue.
           </p>
-          {invalidAttempt && <p className="text-sm text-red-500 text-center">That passcode didn&apos;t work. Try again.</p>}
+          {invalidAttempt && <p className="text-sm text-red-500 text-center">That passcode did not work. Try again.</p>}
           <form className="space-y-4" action={`/s/${params.slug}`} method="GET">
             <input
               type="password"
