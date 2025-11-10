@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X, Moon, Sun, Contrast } from "lucide-react"
+import { Menu, X, Moon, Sun } from "lucide-react"
 import { useTheme } from "@/components/providers/theme-provider"
 import { cn } from "@/lib/utils"
 
@@ -20,7 +20,7 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const pathname = usePathname()
-  const { theme, highContrast, toggleTheme, toggleHighContrast } = useTheme()
+  const { theme, toggleTheme, } = useTheme()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -76,14 +76,6 @@ export function Header() {
             aria-label="Toggle theme"
           >
             {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-          </button>
-          <button
-            onClick={toggleHighContrast}
-            className={cn("p-2 rounded-md hover:bg-muted transition-colors", highContrast === "high" && "bg-muted")}
-            aria-label="Toggle high contrast"
-            title="High Contrast Mode"
-          >
-            <Contrast className="w-5 h-5" />
           </button>
 
           {/* Mobile Menu Button */}

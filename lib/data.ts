@@ -212,12 +212,19 @@ export const galleryImages = [
     caption: "Exploring the historic city of Samarkand with Prime Minister Abdulla Aripov",
     category: "Travel",
   },
-    {
+  {
     id: 7,
     src: "/football_cup.jpg",
     alt: "Football Cup",
     caption: "Winning the inter-school football cup",
     category: "Sports",
+  },
+  {
+    id: 8,
+    src: "/team_six.jpg",
+    alt: "With my team at Builder's CLub's Hackaton",
+    caption: "With my team at Builder's CLub's Hackaton",
+    category: "Community",
   },
 ]
 
