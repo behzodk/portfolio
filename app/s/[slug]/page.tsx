@@ -73,7 +73,7 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
     return { ip, location, deviceType }
   }
 
-  const logVisit = async (shortLinkId: string) => {
+  const logVisit = async (shortLinkId: string, passcodeSuccess: boolean | null) => {
     try {
       const info = collectVisitorInfo()
       await supabase.from("visits").insert({
@@ -81,6 +81,7 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
         ip_address: info.ip,
         location: info.location,
         device_type: info.deviceType,
+        passcode_success: passcodeSuccess,
       })
     } catch {
       // ignore logging errors
@@ -112,11 +113,15 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
         : ""
 
     if (passcode && passcode === data.passcode) {
-      await logVisit(data.id)
+      await logVisit(data.id, true)
       redirect(data.destination_url)
     }
 
     const invalidAttempt = Boolean(passcode)
+
+    if (invalidAttempt) {
+      await logVisit(data.id, false)
+    }
 
     return (
       <main className="min-h-screen flex items-center justify-center px-4">
@@ -152,6 +157,6 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
     )
   }
 
-  await logVisit(data.id)
+  await logVisit(data.id, data.require_passcode ? false : true)
   redirect(data.destination_url)
 }
