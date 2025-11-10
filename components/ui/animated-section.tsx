@@ -1,10 +1,7 @@
-"use client"
-
 import type React from "react"
 
 interface AnimatedSectionProps {
   children: React.ReactNode
-  delay?: number
   className?: string
 }
 
