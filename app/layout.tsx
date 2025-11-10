@@ -43,7 +43,7 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body className={`${geistSans.className} antialiased`}>
+      <body suppressHydrationWarning className={`${geistSans.className} antialiased`}>
         <ThemeProvider>
           <SkipToContent />
           <Header />

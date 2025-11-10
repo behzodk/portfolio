@@ -4,10 +4,9 @@
 import Link from "next/link"
 import { ArrowRight, Github, Linkedin, Mail, Sparkles, Brain, Code, Database, Wrench } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
-import { motion, useAnimation, useReducedMotion } from "framer-motion"
-import type { Variants, Transition } from "framer-motion"
-import { useEffect, ReactNode } from "react"
-import { useInView } from "react-intersection-observer"
+import { motion, useReducedMotion } from "framer-motion"
+import type { Variants } from "framer-motion"
+import { ReactNode } from "react"
 import { ImageWithPlaceholder } from "@/components/ui/image-with-placeholder"
 import { projects, blogPosts, skills } from "@/lib/data"
 import { AnimatedBackground } from "@/components/hero/animated-background"
@@ -23,32 +22,8 @@ type AnimatedSectionProps = {
   delay?: number
 }
 
-const springy: Transition = { type: "spring", damping: 25, stiffness: 100 }
-
-const AnimatedSection = ({ children, delay = 0 }: AnimatedSectionProps) => {
-  const controls = useAnimation()
-  const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.1 })
-
-  useEffect(() => {
-    if (inView) controls.start("visible")
-  }, [controls, inView])
-
-  const variants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  }
-
-  return (
-    <motion.div
-      ref={ref}
-      initial="hidden"
-      animate={controls}
-      variants={variants}
-      transition={{ ...springy, delay }}
-    >
-      {children}
-    </motion.div>
-  )
+const AnimatedSection = ({ children }: AnimatedSectionProps) => {
+  return <div>{children}</div>
 }
 
 type StaggeredTextProps = {
@@ -267,16 +242,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <AnimatedSection>
             <div className="text-center mb-16 space-y-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium mb-4"
-              >
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium mb-4">
                 <Sparkles className="w-4 h-4 text-primary" />
                 <span>Technical Expertise</span>
-              </motion.div>
+              </div>
               <h2 className="text-4xl sm:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
                 Skills & Stack
               </h2>
@@ -291,46 +260,36 @@ export default function Home() {
               category="Machine Learning"
               skills={skills["Machine Learning"]}
               icon={Brain}
-              delay={0}
               gradient="bg-gradient-to-br from-purple-500 to-pink-500"
             />
             <SkillCard
               category="Web Development"
               skills={skills["Web Development"]}
               icon={Code}
-              delay={0.1}
               gradient="bg-gradient-to-br from-blue-500 to-cyan-500"
             />
             <SkillCard
               category="Data Science"
               skills={skills["Data Science"]}
               icon={Database}
-              delay={0.2}
               gradient="bg-gradient-to-br from-green-500 to-emerald-500"
             />
             <SkillCard
               category="Tools & Platforms"
               skills={skills["Tools & Platforms"]}
               icon={Wrench}
-              delay={0.3}
               gradient="bg-gradient-to-br from-orange-500 to-red-500"
             />
           </div>
 
           <AnimatedSection delay={0.4}>
             <div className="text-center mt-12">
-              <motion.p
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="text-muted-foreground"
-              >
+              <p className="text-muted-foreground">
                 Always learning and exploring new technologies.{" "}
                 <Link href="/about" className="text-primary hover:underline font-medium">
                   Learn more about my journey
                 </Link>
-              </motion.p>
+              </p>
             </div>
           </AnimatedSection>
         </div>
