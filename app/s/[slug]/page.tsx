@@ -168,6 +168,6 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
     )
   }
 
-  await logVisit(data.id, data.require_passcode ? false : true)
+  await logVisit(data.id, true)
   redirect(data.destination_url)
 }

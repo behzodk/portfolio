@@ -107,11 +107,22 @@ const parseDestination = (value: string) => {
 }
 
 type UserLink = {
+  id: string
   slug: string
   destination_url: string
   created_at: string | null
   expires_at: string | null
   visibility: VisibilityOption
+}
+
+type VisitRow = {
+  id: number
+  short_link_id: string
+  visited_at: string
+  device_type: string | null
+  browser: string | null
+  location: string | null
+  passcode_success: boolean | null
 }
 
 export default function ShortenUrlPage() {
@@ -139,6 +150,10 @@ export default function ShortenUrlPage() {
   const [toastType, setToastType] = useState<"success" | "info">("success")
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null)
   const [pendingDeleteSlug, setPendingDeleteSlug] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<"links" | "analytics">("links")
+  const [selectedAnalyticsLink, setSelectedAnalyticsLink] = useState<string | null>(null)
+  const [analyticsVisits, setAnalyticsVisits] = useState<VisitRow[]>([])
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
 
   const expiresAt = useMemo(
     () => calculateExpiryDate(formState.expiration, formState.customExpiryDays),
@@ -165,7 +180,7 @@ export default function ShortenUrlPage() {
     setLinksLoading(true)
     supabase
       .from("short_links")
-      .select("slug,destination_url,created_at,expires_at,visibility")
+      .select("id,slug,destination_url,created_at,expires_at,visibility")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
@@ -173,6 +188,33 @@ export default function ShortenUrlPage() {
         setLinksLoading(false)
       })
   }, [userId])
+
+  useEffect(() => {
+    if (userLinks.length === 0) {
+      setSelectedAnalyticsLink(null)
+      return
+    }
+    if (!selectedAnalyticsLink) {
+      setSelectedAnalyticsLink(userLinks[0].id)
+    }
+  }, [userLinks, selectedAnalyticsLink])
+
+  useEffect(() => {
+    if (!selectedAnalyticsLink || !userId) {
+      setAnalyticsVisits([])
+      return
+    }
+    setAnalyticsLoading(true)
+    supabase
+      .from("visits")
+      .select("id,short_link_id,visited_at,device_type,browser,location,passcode_success")
+      .eq("short_link_id", selectedAnalyticsLink)
+      .order("visited_at", { ascending: false })
+      .then(({ data }) => {
+        setAnalyticsVisits(data ?? [])
+        setAnalyticsLoading(false)
+      })
+  }, [selectedAnalyticsLink, userId])
 
   useEffect(() => {
     const slug = formState.slug.trim()
@@ -219,11 +261,67 @@ export default function ShortenUrlPage() {
   const destinationReady = !destinationMeta.error
   const passcodeReady = !passcodeError
   const isCreateDisabled = isSubmitting || !destinationReady || !slugReady || !passcodeReady
+  const analyticsSummary = useMemo(() => {
+    const total = analyticsVisits.length
+    const passOk = analyticsVisits.filter((v) => v.passcode_success === true).length
+    const passFail = analyticsVisits.filter((v) => v.passcode_success === false).length
+    const deviceCounts = analyticsVisits.reduce<Record<string, number>>((acc, visit) => {
+      const key = visit.device_type ?? "unknown"
+      acc[key] = (acc[key] ?? 0) + 1
+      return acc
+    }, {})
+    const browserCounts = analyticsVisits.reduce<Record<string, number>>((acc, visit) => {
+      const key = visit.browser ?? "unknown"
+      acc[key] = (acc[key] ?? 0) + 1
+      return acc
+    }, {})
+    const lastVisit = analyticsVisits[0]?.visited_at ?? null
+    return { total, passOk, passFail, deviceCounts, browserCounts, lastVisit }
+  }, [analyticsVisits])
+
+  const selectedAnalyticsSlug = useMemo(() => {
+    if (!selectedAnalyticsLink) return ""
+    return userLinks.find((link) => link.id === selectedAnalyticsLink)?.slug ?? ""
+  }, [selectedAnalyticsLink, userLinks])
+
+  const deviceDistribution = useMemo(() => {
+    return Object.entries(analyticsSummary.deviceCounts).map(([device, count]) => {
+      const percent = (count / Math.max(analyticsSummary.total, 1)) * 100
+      return (
+        <div key={device} className="flex items-center gap-3">
+          <span className="text-xs capitalize w-16 text-muted-foreground">{device}</span>
+          <div className="flex-1 h-2 rounded-full bg-muted">
+            <div className="h-2 rounded-full bg-primary" style={{ width: `${percent}%` }} />
+          </div>
+          <span className="text-xs text-muted-foreground w-6 text-right">{count}</span>
+        </div>
+      )
+    })
+  }, [analyticsSummary.deviceCounts, analyticsSummary.total])
+
+  const browserDistribution = useMemo(() => {
+    return Object.entries(analyticsSummary.browserCounts).map(([browser, count]) => {
+      const percent = (count / Math.max(analyticsSummary.total, 1)) * 100
+      return (
+        <div key={browser} className="flex items-center gap-3">
+          <span className="text-xs capitalize w-16 text-muted-foreground">{browser}</span>
+          <div className="flex-1 h-2 rounded-full bg-muted">
+            <div className="h-2 rounded-full bg-primary" style={{ width: `${percent}%` }} />
+          </div>
+          <span className="text-xs text-muted-foreground w-6 text-right">{count}</span>
+        </div>
+      )
+    })
+  }, [analyticsSummary.browserCounts, analyticsSummary.total])
 
   const formatDate = (value: string | null | undefined) => {
     if (!value) return "Never"
     try {
-      return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      return new Date(value).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
     } catch {
       return "Never"
     }
@@ -307,16 +405,27 @@ export default function ShortenUrlPage() {
       destination: data.destination_url,
     })
     if (userId) {
-      setUserLinks((prev) => [
-        {
+      // setUserLinks((prev) => [
+      //   {
+      //     slug: data.slug,
+      //     destination_url: data.destination_url,
+      //     created_at: data.created_at ?? new Date().toISOString(),
+      //     expires_at: data.expires_at,
+      //     visibility: data.visibility,
+      //   },
+      //   ...prev,
+      // ])
+      setUserLinks((prev) => {
+        const newLink: UserLink = {
+          id: data.slug,
           slug: data.slug,
           destination_url: data.destination_url,
           created_at: data.created_at ?? new Date().toISOString(),
           expires_at: data.expires_at,
           visibility: data.visibility,
-        },
-        ...prev,
-      ])
+        }
+        return [newLink, ...prev]
+      })
     }
     setCopied(false)
     setStatus(null)
@@ -424,9 +533,23 @@ export default function ShortenUrlPage() {
           >
             Home
           </Link>
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium">
+          <button
+            onClick={() => setActiveTab("links")}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === "links" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/40"
+            }`}
+          >
             <LinkIcon className="h-4 w-4" />
             Links
+          </button>
+          <button
+            onClick={() => setActiveTab("analytics")}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === "analytics" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/40"
+            }`}
+          >
+            <Globe className="h-4 w-4" />
+            Analytics
           </button>
         </nav>
 
@@ -467,115 +590,222 @@ export default function ShortenUrlPage() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-lg font-semibold hidden sm:block">Links</h1>
-            <button
-              onClick={() => setIsBuilderOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition"
-            >
-              <Plus className="h-4 w-4" />
-              New
-            </button>
+            <h1 className="text-lg font-semibold hidden sm:block">
+              {activeTab === "links" ? "Links" : "Analytics"}
+            </h1>
+            {activeTab === "links" && (
+              <button
+                onClick={() => setIsBuilderOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition"
+              >
+                <Plus className="h-4 w-4" />
+                New
+              </button>
+            )}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                { label: "Total links", value: totalLinks, icon: LinkIcon },
-                { label: "This month", value: thisMonthLinks, icon: Calendar },
-              ].map((stat) => (
-                <div key={stat.label} className="rounded-lg bg-card border border-border p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">{stat.label}</p>
-                      <p className="text-2xl font-semibold text-foreground mt-1">{stat.value}</p>
-                    </div>
-                    <stat.icon className="h-6 w-6 text-muted-foreground opacity-40" />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {status && (
-              <div
-                className={`rounded-lg border p-3 text-sm ${
-                  status.type === "success"
-                    ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200"
-                    : "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
-                }`}
-              >
-                {status.message}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-2">
-                <h2 className="text-sm font-semibold text-foreground">
-                  {userLinks.length === 0 ? "No links yet" : "Your links"}
-                </h2>
-                {userLinks.length > 0 && <span className="text-xs text-muted-foreground">{userLinks.length}</span>}
-              </div>
-
-              {linksLoading ? (
-                <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Loading...</span>
-                </div>
-              ) : userLinks.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-sm text-muted-foreground mb-4">Create your first short link</p>
-                  <button
-                    onClick={() => setIsBuilderOpen(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create link
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {userLinks.map((link) => (
-                    <div
-                      key={link.slug}
-                      className="rounded-lg border border-border bg-card p-4 hover:border-primary/40 transition"
-                    >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-mono text-sm font-semibold text-primary">
-                              {shortDomain}/{link.slug}
-                            </p>
-                            {link.visibility === "private" && <Lock className="h-3 w-3 text-muted-foreground" />}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1 truncate">{link.destination_url}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Created {formatDate(link.created_at)} · Expires {formatDate(link.expires_at)}
-                          </p>
+            {activeTab === "links" ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    { label: "Total links", value: totalLinks, icon: LinkIcon },
+                    { label: "This month", value: thisMonthLinks, icon: Calendar },
+                  ].map((stat) => (
+                    <div key={stat.label} className="rounded-lg bg-card border border-border p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">{stat.label}</p>
+                          <p className="text-2xl font-semibold text-foreground mt-1">{stat.value}</p>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <button
-                            onClick={() => handleCopyShortLink(link.slug)}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition"
-                          >
-                            <Copy className="h-3 w-3" />
-                            Copy
-                          </button>
-                          <button
-                            onClick={() => setPendingDeleteSlug(link.slug)}
-                            disabled={deletingSlug === link.slug}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition disabled:opacity-50"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            {deletingSlug === link.slug ? "Deleting..." : "Delete"}
-                          </button>
-                        </div>
+                        <stat.icon className="h-6 w-6 text-muted-foreground opacity-40" />
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+
+                {status && (
+                  <div
+                    className={`rounded-lg border p-3 text-sm ${
+                      status.type === "success"
+                        ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200"
+                        : "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+                    }`}
+                  >
+                    {status.message}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-2">
+                    <h2 className="text-sm                    font-semibold text-foreground">
+                      {userLinks.length === 0 ? "No links yet" : "Your links"}
+                    </h2>
+                    {userLinks.length > 0 && <span className="text-xs text-muted-foreground">{userLinks.length}</span>}
+                  </div>
+
+                  {linksLoading ? (
+                    <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm">Loading...</span>
+                    </div>
+                  ) : userLinks.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-sm text-muted-foreground mb-4">Create your first short link</p>
+                      <button
+                        onClick={() => setIsBuilderOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create link
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {userLinks.map((link) => (
+                        <div
+                          key={link.slug}
+                          className="rounded-lg border border-border bg-card p-4 hover:border-primary/40 transition space-y-2"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-mono text-sm font-semibold text-primary">
+                                  {shortDomain}/{link.slug}
+                                </p>
+                                {link.visibility === "private" && <Lock className="h-3 w-3 text-muted-foreground" />}
+                                {link.expires_at && new Date(link.expires_at) < new Date() && (
+                                  <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 text-[10px] font-semibold px-2 py-0.5">
+                                    Expired
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1 truncate">{link.destination_url}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Created {formatDate(link.created_at)} · Expires {formatDate(link.expires_at)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <button
+                                onClick={() => handleCopyShortLink(link.slug)}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition"
+                              >
+                                <Copy className="h-3 w-3" />
+                                Copy
+                              </button>
+                              <button
+                                onClick={() => setPendingDeleteSlug(link.slug)}
+                                disabled={deletingSlug === link.slug}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition disabled:opacity-50"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                {deletingSlug === link.slug ? "Deleting..." : "Delete"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <section className="space-y-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-[0.3em]">Analytics</p>
+                    <h2 className="text-xl font-semibold">
+                      {selectedAnalyticsLink ? `${shortDomain}/${selectedAnalyticsSlug}` : "Select a link"}
+                    </h2>
+                  </div>
+                  {userLinks.length > 0 && (
+                    <select
+                      value={selectedAnalyticsLink ?? ""}
+                      onChange={(e) => setSelectedAnalyticsLink(e.target.value || null)}
+                      className="rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                    >
+                      {userLinks.map((link) => (
+                        <option key={link.id} value={link.id}>
+                          {shortDomain}/{link.slug}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {analyticsLoading ? (
+                  <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Loading analytics...</span>
+                  </div>
+                ) : !selectedAnalyticsLink ? (
+                  <p className="text-sm text-muted-foreground">Create a link to view analytics.</p>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {[
+                        { label: "Total visits", value: analyticsSummary.total },
+                        { label: "Passcode success", value: analyticsSummary.passOk },
+                        { label: "Passcode fails", value: analyticsSummary.passFail },
+                        {
+                          label: "Last visit",
+                          value: analyticsSummary.lastVisit ? formatDate(analyticsSummary.lastVisit) : "No visits",
+                        },
+                      ].map((card) => (
+                        <div key={card.label} className="rounded-lg border border-border bg-card p-4">
+                          <p className="text-xs text-muted-foreground">{card.label}</p>
+                          <p className="text-xl font-semibold text-foreground mt-1">{card.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                        <p className="text-sm font-semibold">Device types</p>
+                        {deviceDistribution.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No visits yet</p>
+                        ) : (
+                          deviceDistribution
+                        )}
+                      </div>
+                      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                        <p className="text-sm font-semibold">Browsers</p>
+                        {browserDistribution.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No visits yet</p>
+                        ) : (
+                          browserDistribution
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                      <p className="text-sm font-semibold">Recent visits</p>
+                      {analyticsVisits.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No visits logged yet.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {analyticsVisits.slice(0, 5).map((visit) => (
+                            <div key={visit.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs">
+                              <div className="text-muted-foreground">
+                                {visit.location || "Unknown location"}
+                              </div>
+                              <div className="flex gap-4 text-muted-foreground">
+                                <span>{visit.device_type ?? "unknown"}</span>
+                                <span>{visit.browser ?? "unknown"}</span>
+                                <span>{formatDate(visit.visited_at)}</span>
+                                <span>{visit.passcode_success === false ? "Failed" : "Success"}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
           </div>
         </div>
       </main>
