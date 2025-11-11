@@ -132,13 +132,8 @@ export default function ShortenUrlPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState<string | null>(null)
   const [isBuilderOpen, setIsBuilderOpen] = useState(false)
-  const [createdLink, setCreatedLink] = useState<{
-    slug: string
-    destination: string
-  } | null>(null)
   const [userLinks, setUserLinks] = useState<UserLink[]>([])
   const [linksLoading, setLinksLoading] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [destinationTouched, setDestinationTouched] = useState(false)
   const [slugTouched, setSlugTouched] = useState(false)
   const [slugError, setSlugError] = useState<string | null>(null)
@@ -400,10 +395,6 @@ export default function ShortenUrlPage() {
       return
     }
 
-    setCreatedLink({
-      slug: data.slug,
-      destination: data.destination_url,
-    })
     if (userId) {
       // setUserLinks((prev) => [
       //   {
@@ -427,7 +418,6 @@ export default function ShortenUrlPage() {
         return [newLink, ...prev]
       })
     }
-    setCopied(false)
     setStatus(null)
     setToastType("success")
     setToastMessage(`${shortDomain}/${data.slug} created`)

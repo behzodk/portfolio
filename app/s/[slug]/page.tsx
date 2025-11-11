@@ -1,7 +1,6 @@
-import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { headers } from "next/headers"
-import { AlertTriangle, Lock } from "lucide-react"
+import { Lock } from "lucide-react"
 import { createSupabaseServerClient } from "@/lib/supabase-server"
 
 interface ShortLinkPageProps {
