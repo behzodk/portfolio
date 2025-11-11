@@ -39,11 +39,21 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
   const hdrs = await headers()
 
   const detectDevice = (userAgent: string | null) => {
-    if (!userAgent) return "unknown"
+    if (!userAgent) return { device: "unknown", browser: "unknown" }
     const ua = userAgent.toLowerCase()
-    if (ua.includes("tablet") || ua.includes("ipad")) return "tablet"
-    if (ua.includes("mobi") || ua.includes("android")) return "mobile"
-    return "desktop"
+    let browser = "unknown"
+    if (ua.includes("chrome")) browser = "Chrome"
+    if (ua.includes("firefox")) browser = "Firefox"
+    if (ua.includes("safari") && !ua.includes("chrome")) browser = "Safari"
+    if (ua.includes("edg")) browser = "Edge"
+    if (ua.includes("opera") || ua.includes("opr")) browser = "Opera"
+    const device =
+      ua.includes("tablet") || ua.includes("ipad")
+        ? "tablet"
+        : ua.includes("mobi") || ua.includes("android")
+          ? "mobile"
+          : "desktop"
+    return { device, browser }
   }
 
   const collectVisitorInfo = () => {
@@ -68,9 +78,9 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
       ""
 
     const location = [city, country].filter(Boolean).join(", ") || null
-    const deviceType = detectDevice(hdrs.get("user-agent"))
+    const detected = detectDevice(hdrs.get("user-agent"))
 
-    return { ip, location, deviceType }
+    return { ip, location, deviceType: detected.device, browser: detected.browser }
   }
 
   const logVisit = async (shortLinkId: string, passcodeSuccess: boolean | null) => {
@@ -81,6 +91,7 @@ export default async function ShortLinkRedirect(props: ShortLinkPageProps) {
         ip_address: info.ip,
         location: info.location,
         device_type: info.deviceType,
+        browser: info.browser,
         passcode_success: passcodeSuccess,
       })
     } catch {
