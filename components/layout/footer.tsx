@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Github, Linkedin, Twitter, Mail, Instagram } from "lucide-react"
+import { Github, Linkedin, Instagram, Mail } from "lucide-react"
 
 export function Footer() {
   const currentYear = new Date().getFullYear()
@@ -97,7 +97,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Twitter"
+                aria-label="Instagram"
               >
                 <Instagram className="w-5 h-5" />
               </a>

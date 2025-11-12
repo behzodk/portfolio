@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Share2, Link2, TwitterIcon, Linkedin, Check } from "lucide-react"
+import { Share2, Link2, Linkedin, Check, Instagram } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface ShareSheetProps {
@@ -10,7 +10,7 @@ interface ShareSheetProps {
   description?: string
 }
 
-export function ShareSheet({ url, title, description }: ShareSheetProps) {
+export function ShareSheet({ url }: ShareSheetProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -26,9 +26,9 @@ export function ShareSheet({ url, title, description }: ShareSheetProps) {
     }
   }
 
-  const handleShareTwitter = () => {
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(fullUrl)}`
-    window.open(twitterUrl, "_blank", "noopener,noreferrer")
+  const handleShareInstagram = () => {
+    const instagramUrl = `https://www.instagram.com/sharing/share-offsite/?url=${encodeURIComponent(fullUrl)}`
+    window.open(instagramUrl, "_blank", "noopener,noreferrer")
   }
 
   const handleShareLinkedIn = () => {
@@ -83,14 +83,14 @@ export function ShareSheet({ url, title, description }: ShareSheetProps) {
                   </div>
                 </button>
 
-                {/* Twitter/X */}
+                {/* Instagram */}
                 <button
-                  onClick={handleShareTwitter}
+                  onClick={handleShareInstagram}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors text-left"
                 >
-                  <TwitterIcon className="w-5 h-5 flex-shrink-0" />
+                  <Instagram className="w-5 h-5 flex-shrink-0" />
                   <div className="flex-1">
-                    <div className="font-medium text-sm">Share on X</div>
+                    <div className="font-medium text-sm">Share on Instagram</div>
                     <div className="text-xs text-muted-foreground">Post to your timeline</div>
                   </div>
                 </button>

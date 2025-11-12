@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import type { FormEvent } from "react"
-import { Mail, Linkedin, Github, Twitter, Send, CheckCircle } from "lucide-react"
+import { Mail, Linkedin, Github, Instagram, Send, CheckCircle } from "lucide-react"
 import { AnimatedSection } from "@/components/ui/animated-section"
 import { CopyButton } from "@/components/ui/copy-button"
 
@@ -95,7 +95,7 @@ export default function ContactPage() {
   return (
     <div className="w-full">
       {/* Header */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+      <section className="pt-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
         <div className="max-w-7xl mx-auto">
           <AnimatedSection>
             <h1 className="text-5xl font-bold mb-4">Get in Touch</h1>
@@ -107,7 +107,7 @@ export default function ContactPage() {
       </section>
 
       {/* Contact Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="pt-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             {/* Contact Form */}
@@ -279,16 +279,15 @@ export default function ContactPage() {
                   </div>
                 </a>
 
-                {/* Twitter */}
                 <a
-                  href="https://twitter.com"
+                  href="https://instagram.com/behzod.mv"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-start gap-4 p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-colors group"
                 >
-                  <Twitter className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
+                  <Instagram className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
                   <div>
-                    <h4 className="font-semibold group-hover:text-primary transition-colors">Twitter</h4>
+                    <h4 className="font-semibold group-hover:text-primary transition-colors">Instagram</h4>
                     <p className="text-sm text-muted-foreground">Follow for updates</p>
                   </div>
                 </a>
