@@ -246,8 +246,8 @@ export default function ContactPage() {
                     <Mail className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
                     <div className="flex-1">
                       <h4 className="font-semibold mb-2">Email</h4>
-                      <p className="text-sm text-muted-foreground mb-3">behzodmusurmonqulov@gmail.com</p>
-                      <CopyButton text="behzodmusurmonqulov@gmail.com" label="Copy Email" className="w-full justify-center" />
+                      <p className="text-sm text-muted-foreground mb-3">contact@behzod.uk</p>
+                      <CopyButton text="contact@behzod.uk" label="Copy Email" className="w-full justify-center" />
                     </div>
                   </div>
 

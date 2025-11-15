@@ -72,8 +72,8 @@ export default function PrivacyPolicyPage() {
               <li className={listItem}>Sessions persist until you sign out or the token expires.</li>
               <li className={listItem}>
                 You may request deletion of your account-associated data (short links, profile reference) by emailing
-                <Link href="mailto:behzodmusurmonqulov@gmail.com" className="text-primary font-medium px-1">
-                  behzodmusurmonqulov@gmail.com
+                <Link href="mailto:contact@behzod.uk" className="text-primary font-medium px-1">
+                  contact@behzod.uk
                 </Link>
                 .
               </li>
@@ -102,8 +102,8 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-xl font-semibold text-foreground">9. Contact</h2>
             <p>
               Questions or privacy requests? Reach out at{" "}
-              <Link href="mailto:behzodmusurmonqulov@gmail.com" className="text-primary font-medium">
-                behzodmusurmonqulov@gmail.com
+              <Link href="mailto:contact@behzod.uk" className="text-primary font-medium">
+                contact@behzod.uk
               </Link>{" "}
               or through the <Link href="/contact" className="text-primary font-medium hover:underline">contact page</Link>.
             </p>

@@ -162,6 +162,6 @@ MIT License - feel free to use this template for your own portfolio!
 ## Contact
 
 Behzod Musurmonkulov
-- Email: behzodmusurmonqulov@gmail.com
+- Email: contact@behzod.uk
 - GitHub: [@behzod](https://github.com/behzodk)
 - LinkedIn: [/in/behzod](https://linkedin.com/in/behzodmusurmonqulov)
