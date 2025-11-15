@@ -1,14 +1,13 @@
-import type React from "react"
-
+import type { ReactNode } from "react"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { SkipToContent } from "@/components/ui/skip-to-content"
 
-export default function ChromeLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+interface ChromeLayoutProps {
+  children: ReactNode
+}
+
+export default function ChromeLayout({ children }: ChromeLayoutProps) {
   return (
     <>
       <SkipToContent />

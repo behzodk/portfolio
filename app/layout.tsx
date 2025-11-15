@@ -14,8 +14,10 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon_io/favicon.ico"},
-      { url: "/favicon_io/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
-      { url: "/favicon_io/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon_io/android-chrome-192x192.png",
+        sizes: "192x192", type: "image/png" },
+      { url: "/favicon_io/android-chrome-512x512.png",
+        sizes: "512x512", type: "image/png" },
     ],
     shortcut: "/favicon_io/favicon.ico",
     apple: "/favicon_io/apple-touch-icon.png",
@@ -43,9 +45,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body suppressHydrationWarning className={`${geistSans.className} antialiased`}>
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
       </body>
     </html>
