@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Share2, Link2, Linkedin, Check, Instagram } from "lucide-react"
+import { Share2, Link2, Linkedin, Check, Instagram, Send } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface ShareSheetProps {
@@ -34,6 +34,11 @@ export function ShareSheet({ url }: ShareSheetProps) {
   const handleShareLinkedIn = () => {
     const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(fullUrl)}`
     window.open(linkedInUrl, "_blank", "noopener,noreferrer")
+  }
+
+  const handleShareTelegram = () => {
+    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(fullUrl)}`
+    window.open(telegramUrl, "_blank", "noopener,noreferrer")
   }
 
   return (
@@ -92,6 +97,18 @@ export function ShareSheet({ url }: ShareSheetProps) {
                   <div className="flex-1">
                     <div className="font-medium text-sm">Share on Instagram</div>
                     <div className="text-xs text-muted-foreground">Post to your timeline</div>
+                  </div>
+                </button>
+
+                {/* Telegram */}
+                <button
+                  onClick={handleShareTelegram}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors text-left"
+                >
+                  <Send className="w-5 h-5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">Share on Telegram</div>
+                    <div className="text-xs text-muted-foreground">Send to a chat</div>
                   </div>
                 </button>
 
