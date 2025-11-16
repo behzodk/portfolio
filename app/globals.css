@@ -140,3 +140,56 @@ html {
     scroll-behavior: auto !important;
   }
 }
+
+/* Basic rich text styling for blog content */
+.rich-text {
+  color: var(--foreground);
+  line-height: 1.7;
+}
+
+.rich-text h1,
+.rich-text h2,
+.rich-text h3,
+.rich-text h4 {
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 1.75rem 0 1rem;
+}
+
+.rich-text h1 {
+  font-size: 2.25rem;
+}
+
+.rich-text h2 {
+  font-size: 1.875rem;
+}
+
+.rich-text h3 {
+  font-size: 1.5rem;
+}
+
+.rich-text h4 {
+  font-size: 1.25rem;
+}
+
+.rich-text p {
+  margin: 0 0 1.25rem;
+  color: var(--muted-foreground);
+}
+
+.rich-text ul,
+.rich-text ol {
+  padding-left: 1.25rem;
+  margin: 0 0 1.25rem;
+  color: var(--muted-foreground);
+}
+
+.rich-text li + li {
+  margin-top: 0.35rem;
+}
+
+.rich-text a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--primary) 60%, transparent);
+}

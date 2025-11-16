@@ -1,69 +1,121 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { notFound } from "next/navigation"
 import { ArrowLeft, Clock } from "lucide-react"
+import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { AnimatedSection } from "@/components/ui/animated-section"
 import { ImageWithPlaceholder } from "@/components/ui/image-with-placeholder"
 import { ShareSheet } from "@/components/ui/share-sheet"
 import { ReadingProgress } from "@/components/ui/reading-progress"
-import { blogPosts } from "@/lib/data"
 import { calculateReadingTime } from "@/lib/reading-time"
+import type { BlogPostDetail, BlogPostSection } from "@/lib/types/blog"
 
-interface BlogPostPageProps {
-  params: Promise<{ slug: string }>
+export const revalidate = 60
+
+async function fetchPost(slug: string) {
+  const supabase = createSupabaseServerClient()
+  const { data, error } = await supabase
+    .from("posts")
+    .select(
+      `
+        id,
+        title,
+        slug,
+        excerpt,
+        status,
+        published_at,
+        updated_at,
+        sections (
+          id,
+          type,
+          position,
+          content
+        )
+      `,
+    )
+    .eq("slug", slug)
+    .maybeSingle()
+
+  if (error) {
+    console.error("Failed to load post:", error.message)
+  }
+
+  return data as (BlogPostDetail & { sections: BlogPostSection[] }) | null
 }
 
-export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const post = blogPosts.find((p) => p.slug === slug)
+  const post = await fetchPost(slug)
 
-  if (!post) {
-    return {
-      title: "Post Not Found",
-    }
+  if (!post || post.status !== "published" || !post.published_at) {
+    return { title: "Post Not Found" }
   }
 
   return {
     title: `${post.title} | Behzod's Blog`,
-    description: post.summary,
+    description: post.excerpt ?? undefined,
     openGraph: {
       title: post.title,
-      description: post.summary,
+      description: post.excerpt ?? undefined,
       type: "article",
-      publishedTime: post.date,
+      publishedTime: post.published_at ?? undefined,
     },
   }
 }
 
-export async function generateStaticParams() {
-  return blogPosts.map((post) => ({
-    slug: post.slug,
-  }))
-}
-
-export default async function BlogPostPage({ params }: BlogPostPageProps) {
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = blogPosts.find((p) => p.slug === slug)
+  const post = await fetchPost(slug)
 
-  if (!post) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Post Not Found</h1>
-          <Link href="/blog" className="text-primary hover:underline">
-            Back to Blog
-          </Link>
-        </div>
-      </div>
-    )
+  const isPublished =
+    post &&
+    post.status === "published" &&
+    post.published_at &&
+    new Date(post.published_at).getTime() <= Date.now()
+
+  if (!post || !isPublished) {
+    notFound()
   }
 
-  const readingTime = calculateReadingTime(post.content)
+  const sections = (post.sections ?? []).sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+  const textForReadingTime = sections
+    .filter((s) => s.type === "text" && s.content)
+    .map((s) => (s.content ?? "").replace(/<[^>]+>/g, ""))
+    .join("\n\n")
+  const readingTime = calculateReadingTime(textForReadingTime)
+
+  const renderSection = (section: BlogPostSection) => {
+    if (section.type === "image") {
+      return (
+        <div className="my-8">
+          <ImageWithPlaceholder
+            src={section.content || "/placeholder.svg"}
+            alt={post.title}
+            width={1200}
+            height={600}
+            className="rounded-lg"
+          />
+        </div>
+      )
+    }
+
+    if (section.type === "video") {
+      return (
+        <div className="my-8 aspect-video w-full overflow-hidden rounded-lg bg-black/60">
+          <video src={section.content ?? ""} controls className="h-full w-full object-cover" />
+        </div>
+      )
+    }
+
+    // text
+    const content = section.content ?? ""
+    return <div className="rich-text" dangerouslySetInnerHTML={{ __html: content }} />
+  }
 
   return (
     <div className="w-full">
       <ReadingProgress />
 
-      {/* Header */}
       <section className="py-12 px-4 sm:px-6 lg:px-8 border-b border-border">
         <div className="max-w-4xl mx-auto">
           <AnimatedSection>
@@ -76,11 +128,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             <h1 className="text-5xl font-bold mb-4">{post.title}</h1>
             <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
               <time>
-                {new Date(post.date).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {post.published_at
+                  ? new Date(post.published_at).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : "Unpublished"}
               </time>
               <span>•</span>
               <span className="flex items-center gap-1">
@@ -92,104 +146,24 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         </div>
       </section>
 
-      {/* Featured Image */}
       <section className="py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <AnimatedSection>
-            <div className="relative h-96 rounded-lg overflow-hidden bg-muted">
-              <ImageWithPlaceholder
-                src={post.cover || "/placeholder.svg"}
-                alt={post.title}
-                width={800}
-                height={400}
-                priority
-              />
-            </div>
-          </AnimatedSection>
+        <div className="max-w-4xl mx-auto space-y-10">
+          {sections.map((section) => (
+            <AnimatedSection key={section.id}>{renderSection(section)}</AnimatedSection>
+          ))}
         </div>
       </section>
 
-      {/* Content */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8">
+      <section className="py-12 px-4 sm:px-6 lg:px-8 border-t border-border">
         <div className="max-w-4xl mx-auto">
-          <AnimatedSection>
-            <div className="prose prose-invert max-w-none dark:prose-invert">
-              <div className="whitespace-pre-wrap text-foreground leading-relaxed space-y-4">
-                {post.content.split("\n\n").map((paragraph, index) => {
-                  if (paragraph.startsWith("#")) {
-                    const level = paragraph.match(/^#+/)?.[0].length || 1
-                    const text = paragraph.replace(/^#+\s/, "")
-                    const className =
-                      {
-                        1: "text-4xl font-bold mt-8 mb-4",
-                        2: "text-2xl font-bold mt-6 mb-3",
-                        3: "text-xl font-bold mt-4 mb-2",
-                      }[level] || "text-lg font-bold mt-4 mb-2"
-                    return (
-                      <div key={index} className={className}>
-                        {text}
-                      </div>
-                    )
-                  }
-                  return (
-                    <p key={index} className="text-muted-foreground">
-                      {paragraph}
-                    </p>
-                  )
-                })}
-              </div>
-            </div>
-          </AnimatedSection>
-
-          {/* Tags & Share */}
-          <AnimatedSection delay={0.1} className="mt-12 pt-8 border-t border-border">
+          <AnimatedSection delay={0.1}>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
               <div className="flex flex-wrap gap-2">
-                {post.tags.map((tag) => (
-                  <span key={tag} className="px-3 py-1 bg-muted rounded-full text-sm">
-                    {tag}
-                  </span>
-                ))}
+                <span className="px-3 py-1 bg-muted rounded-full text-sm">Published</span>
               </div>
-              <ShareSheet url={`/blog/${post.slug}`} title={post.title} description={post.summary} />
+              <ShareSheet url={`/blog/${post.slug}`} title={post.title} description={post.excerpt ?? undefined} />
             </div>
           </AnimatedSection>
-        </div>
-      </section>
-
-      {/* Related Posts */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
-        <div className="max-w-4xl mx-auto">
-          <AnimatedSection>
-            <h2 className="text-3xl font-bold mb-12">More Articles</h2>
-          </AnimatedSection>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {blogPosts
-              .filter((p) => p.id !== post.id)
-              .slice(0, 2)
-              .map((relatedPost, index) => (
-                <AnimatedSection key={relatedPost.id} delay={index * 0.1}>
-                  <Link href={`/blog/${relatedPost.slug}`}>
-                    <article className="group cursor-pointer h-full">
-                      <div className="relative h-48 rounded-lg overflow-hidden mb-4 bg-muted">
-                        <ImageWithPlaceholder
-                          src={relatedPost.cover || "/placeholder.svg"}
-                          alt={relatedPost.title}
-                          width={400}
-                          height={200}
-                          className="group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">
-                        {relatedPost.title}
-                      </h3>
-                      <p className="text-muted-foreground">{relatedPost.summary}</p>
-                    </article>
-                  </Link>
-                </AnimatedSection>
-              ))}
-          </div>
         </div>
       </section>
     </div>
